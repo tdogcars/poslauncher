@@ -76,12 +76,14 @@ There is no visible settings button. The configuration screen lets you:
 The home screen also shows the device date and time in the top-right corner,
 following the device's locale and 12/24-hour clock setting.
 
-**Network widget:** the top-left pill shows the current connection (green dot
-plus the Wi-Fi network name, or Ethernet/Mobile data/Offline). Tapping it opens
-an in-place panel with a download speed test (latency + Mbps). The first tap on
-Wi-Fi asks for the location permission — Android requires it before revealing
-the SSID; if denied, the pill just says "Wi-Fi" and everything else still
-works. Reading the SSID also requires device location services to be enabled.
+**Network widget:** the top-left corner shows the current connection (green
+dot plus the Wi-Fi network name, or Ethernet/Mobile data/Offline) with a
+"Run speed test" button directly beneath it. The test shows live download
+Mbps while running and "Mbps · latency" when done, all without leaving the
+home screen. On first launch while on Wi-Fi the app asks once for the
+location permission — Android requires it before revealing the SSID; if
+denied, the label just says "Wi-Fi" and everything else still works. Reading
+the SSID also requires device location services to be enabled.
 
 Tap **Done** (or the Back button) to return. Settings persist across reboots.
 

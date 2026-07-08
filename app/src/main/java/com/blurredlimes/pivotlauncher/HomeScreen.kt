@@ -129,34 +129,37 @@ fun HomeScreen(config: LauncherConfig, onOpenSettings: () -> Unit) {
                 .padding(24.dp),
         )
 
-        // Network status pill, top-left. Tapping opens the in-place panel; the
-        // first tap on Wi-Fi asks for location, which Android requires before
-        // it will reveal the SSID.
-        var showNetworkPanel by remember { mutableStateOf(false) }
+        // Network status pill and speed test, top-left. On first launch while
+        // on Wi-Fi, asks once for location, which Android requires before it
+        // will reveal the SSID; denial just leaves the generic "Wi-Fi" label.
         var permissionTick by remember { mutableIntStateOf(0) }
+        var askedForLocation by remember { mutableStateOf(false) }
         val netStatus = rememberNetworkStatus(refresh, permissionTick)
         val locationPermission = rememberLauncherForActivityResult(
             ActivityResultContracts.RequestPermission()
         ) { permissionTick++ }
 
-        NetworkStatusWidget(
-            status = netStatus,
-            onClick = {
-                val needsLocation = netStatus.type == NetType.WIFI &&
-                    netStatus.name == null &&
-                    ContextCompat.checkSelfPermission(
-                        context, Manifest.permission.ACCESS_FINE_LOCATION
-                    ) != PackageManager.PERMISSION_GRANTED
-                if (needsLocation) {
-                    locationPermission.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-                }
-                showNetworkPanel = true
-            },
+        LaunchedEffect(netStatus) {
+            val needsLocation = netStatus.type == NetType.WIFI &&
+                netStatus.name == null &&
+                ContextCompat.checkSelfPermission(
+                    context, Manifest.permission.ACCESS_FINE_LOCATION
+                ) != PackageManager.PERMISSION_GRANTED
+            if (needsLocation && !askedForLocation) {
+                askedForLocation = true
+                locationPermission.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            }
+        }
+
+        Column(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .systemBarsPadding()
                 .padding(16.dp),
-        )
+        ) {
+            NetworkStatusWidget(status = netStatus)
+            SpeedTestInline(modifier = Modifier.padding(start = 14.dp, top = 2.dp))
+        }
 
         when (val state = lookup) {
             HomeApps.Loading -> Unit // stays pure black while resolving
@@ -182,14 +185,6 @@ fun HomeScreen(config: LauncherConfig, onOpenSettings: () -> Unit) {
                 configured = state.configured,
                 onOpenSettings = onOpenSettings,
                 modifier = Modifier.align(Alignment.Center),
-            )
-        }
-
-        // Last child so it draws over everything else on the home screen.
-        if (showNetworkPanel) {
-            NetworkPanel(
-                status = netStatus,
-                onDismiss = { showNetworkPanel = false },
             )
         }
     }

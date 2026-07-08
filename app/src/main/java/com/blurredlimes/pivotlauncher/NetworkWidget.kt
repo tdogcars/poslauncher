@@ -8,25 +8,21 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.wifi.WifiManager
 import android.os.SystemClock
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -41,8 +37,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -132,18 +126,11 @@ private fun NetStatus.typeLabel(): String = stringResource(
     }
 )
 
-/** Top-left status pill: connection dot plus network name (SSID when readable). */
+/** Connection dot plus network name (SSID when Android lets us read it). */
 @Composable
-fun NetworkStatusWidget(
-    status: NetStatus,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+fun NetworkStatusWidget(status: NetStatus, modifier: Modifier = Modifier) {
     Row(
-        modifier = modifier
-            .clip(RoundedCornerShape(20.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+        modifier = modifier.padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
@@ -165,22 +152,22 @@ fun NetworkStatusWidget(
 }
 
 /**
- * In-place overlay: shows the connection and runs a download speed test
- * without leaving the home screen. Dismiss by tapping outside or Close;
- * leaving the panel cancels a running test.
+ * Speed test that lives directly on the home screen: a button, then a live
+ * Mbps readout while running and "Mbps · latency" when done. Failures show
+ * the underlying cause (timeout, DNS, TLS) instead of a generic message.
  */
 @Composable
-fun NetworkPanel(status: NetStatus, onDismiss: () -> Unit) {
+fun SpeedTestInline(modifier: Modifier = Modifier) {
     val scope = rememberCoroutineScope()
     var running by remember { mutableStateOf(false) }
     var latencyMs by remember { mutableStateOf<Long?>(null) }
     var finalMbps by remember { mutableStateOf<Double?>(null) }
     var liveMbps by remember { mutableStateOf<Double?>(null) }
-    var failed by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
     var job by remember { mutableStateOf<Job?>(null) }
 
     fun start() {
-        failed = false
+        error = null
         latencyMs = null
         finalMbps = null
         liveMbps = null
@@ -192,102 +179,47 @@ fun NetworkPanel(status: NetStatus, onDismiss: () -> Unit) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                failed = true
+                Log.w("SpeedTest", "speed test failed", e)
+                error = e.javaClass.simpleName +
+                    (e.message?.takeIf { it.isNotBlank() }?.let { ": $it" } ?: "")
             } finally {
                 running = false
             }
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xCC000000))
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onDismiss,
-            ),
-    ) {
-        Column(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .widthIn(max = 420.dp)
-                .clip(RoundedCornerShape(24.dp))
-                .background(Color(0xFF141414))
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = {}, // swallow taps so they don't dismiss
-                )
-                .padding(28.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
+    Column(modifier = modifier) {
+        OutlinedButton(onClick = { if (running) job?.cancel() else start() }) {
             Text(
-                text = status.name ?: status.typeLabel(),
-                color = Color.White,
-                fontSize = 20.sp,
-                textAlign = TextAlign.Center,
-            )
-            if (status.name != null) {
-                Text(
-                    text = status.typeLabel(),
-                    color = Color(0xFF999999),
-                    fontSize = 14.sp,
-                )
-            }
-            Spacer(modifier = Modifier.height(20.dp))
-
-            val shownMbps = finalMbps ?: liveMbps
-            Text(
-                text = shownMbps?.let { "%.1f".format(it) } ?: "—",
-                color = if (finalMbps != null) Color.White else Color(0xFFBBBBBB),
-                fontSize = 44.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = stringResource(R.string.speedtest_download_label),
-                color = Color(0xFF999999),
+                text = stringResource(
+                    if (running) R.string.speedtest_cancel else R.string.speedtest_run
+                ),
                 fontSize = 13.sp,
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = latencyMs?.let { stringResource(R.string.speedtest_latency, it) } ?: " ",
-                color = Color(0xFF999999),
+        }
+        when {
+            running -> Text(
+                text = liveMbps?.let { "%.1f Mbps…".format(it) }
+                    ?: stringResource(R.string.speedtest_testing),
+                color = Color(0xFFBBBBBB),
                 fontSize = 14.sp,
             )
-            if (failed) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = stringResource(R.string.speedtest_failed),
-                    color = Color(0xFFE57373),
-                    fontSize = 14.sp,
-                    textAlign = TextAlign.Center,
-                )
-            }
 
-            Spacer(modifier = Modifier.height(24.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (running) {
-                    OutlinedButton(onClick = { job?.cancel() }) {
-                        Text(text = stringResource(R.string.speedtest_cancel))
-                    }
-                } else {
-                    Button(onClick = { start() }) {
-                        Text(text = stringResource(R.string.speedtest_run))
-                    }
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                TextButton(onClick = onDismiss) {
-                    Text(text = stringResource(R.string.speedtest_close))
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = stringResource(R.string.speedtest_hint),
-                color = Color(0xFF666666),
-                fontSize = 11.sp,
-                textAlign = TextAlign.Center,
+            error != null -> Text(
+                text = stringResource(R.string.speedtest_failed_detail, error.orEmpty()),
+                color = Color(0xFFE57373),
+                fontSize = 13.sp,
+                modifier = Modifier.widthIn(max = 320.dp),
+            )
+
+            finalMbps != null -> Text(
+                text = stringResource(
+                    R.string.speedtest_result,
+                    "%.1f".format(finalMbps),
+                    latencyMs ?: 0L,
+                ),
+                color = Color.White,
+                fontSize = 14.sp,
             )
         }
     }
@@ -299,8 +231,8 @@ private suspend fun measureLatencyMs(): Long = withContext(Dispatchers.IO) {
     repeat(3) {
         ensureActive()
         val conn = (URL(PING_URL).openConnection() as HttpURLConnection).apply {
-            connectTimeout = 5_000
-            readTimeout = 5_000
+            connectTimeout = 10_000
+            readTimeout = 10_000
             setRequestProperty("Cache-Control", "no-cache")
         }
         val start = SystemClock.elapsedRealtime()
@@ -313,7 +245,7 @@ private suspend fun measureLatencyMs(): Long = withContext(Dispatchers.IO) {
 private suspend fun measureDownloadMbps(onProgress: (Double) -> Unit): Double =
     withContext(Dispatchers.IO) {
         val conn = (URL(DOWNLOAD_URL).openConnection() as HttpURLConnection).apply {
-            connectTimeout = 8_000
+            connectTimeout = 10_000
             readTimeout = 15_000
             setRequestProperty("Cache-Control", "no-cache")
         }
