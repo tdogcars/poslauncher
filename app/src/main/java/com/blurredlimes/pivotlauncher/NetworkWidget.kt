@@ -57,7 +57,10 @@ data class NetStatus(val type: NetType, val name: String?)
 // taps "Run speed test". Download-only; nothing is uploaded.
 private const val SPEED_HOST = "https://speed.cloudflare.com"
 private const val PING_URL = "$SPEED_HOST/__down?bytes=1"
-private const val DOWNLOAD_URL = "$SPEED_HOST/__down?bytes=200000000"
+
+// Cloudflare 403s requests above ~50 MB, so the test chains 50 MB requests
+// (keep-alive reuses the connection) until the time budget is spent.
+private const val DOWNLOAD_URL = "$SPEED_HOST/__down?bytes=50000000"
 private const val TEST_DURATION_MS = 8_000L
 
 fun readNetworkStatus(context: Context): NetStatus {
@@ -244,34 +247,38 @@ private suspend fun measureLatencyMs(): Long = withContext(Dispatchers.IO) {
 
 private suspend fun measureDownloadMbps(onProgress: (Double) -> Unit): Double =
     withContext(Dispatchers.IO) {
-        val conn = (URL(DOWNLOAD_URL).openConnection() as HttpURLConnection).apply {
-            connectTimeout = 10_000
-            readTimeout = 15_000
-            setRequestProperty("Cache-Control", "no-cache")
-        }
-        try {
+        val buffer = ByteArray(64 * 1024)
+        var totalBytes = 0L
+        val start = SystemClock.elapsedRealtime()
+        var lastUpdate = start
+
+        fun elapsed() = SystemClock.elapsedRealtime() - start
+
+        while (elapsed() < TEST_DURATION_MS) {
+            ensureActive()
+            val conn = (URL(DOWNLOAD_URL).openConnection() as HttpURLConnection).apply {
+                connectTimeout = 10_000
+                readTimeout = 15_000
+                setRequestProperty("Cache-Control", "no-cache")
+            }
             conn.inputStream.use { input ->
-                val buffer = ByteArray(64 * 1024)
-                var totalBytes = 0L
-                val start = SystemClock.elapsedRealtime()
-                var lastUpdate = start
-                while (true) {
+                while (elapsed() < TEST_DURATION_MS) {
                     ensureActive()
                     val read = input.read(buffer)
                     if (read < 0) break
                     totalBytes += read
                     val now = SystemClock.elapsedRealtime()
-                    if (now - start >= TEST_DURATION_MS) break
                     if (now - lastUpdate >= 250) {
                         lastUpdate = now
                         onProgress(toMbps(totalBytes, now - start))
                     }
                 }
-                toMbps(totalBytes, maxOf(1, SystemClock.elapsedRealtime() - start))
             }
-        } finally {
-            conn.disconnect()
+            // Only sever the connection when the window expired mid-response;
+            // fully-read responses go back to the keep-alive pool for reuse.
+            if (elapsed() >= TEST_DURATION_MS) conn.disconnect()
         }
+        toMbps(totalBytes, maxOf(1, elapsed()))
     }
 
 private fun toMbps(bytes: Long, elapsedMs: Long): Double =
