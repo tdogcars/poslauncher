@@ -35,7 +35,7 @@
     <string name="speedtest_run">Run speed test</string>
     <string name="speedtest_cancel">Cancel</string>
     <string name="speedtest_testing">Testing…</string>
-    <string name="speedtest_result">%1$s Mbps · %2$d ms</string>
+    <string name="speedtest_result">↓ %1$s · ↑ %2$s Mbps · %3$d ms</string>
     <string name="speedtest_failed_detail">Test failed — %1$s</string>
     <string name="settings_loading_apps">Loading installed apps…</string>
     <string name="settings_no_apps">No launchable apps found on this device.</string>

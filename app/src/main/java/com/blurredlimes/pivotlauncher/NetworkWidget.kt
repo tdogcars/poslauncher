@@ -58,10 +58,14 @@ data class NetStatus(val type: NetType, val name: String?)
 private const val SPEED_HOST = "https://speed.cloudflare.com"
 private const val PING_URL = "$SPEED_HOST/__down?bytes=1"
 
-// Cloudflare 403s requests above ~50 MB, so the test chains 50 MB requests
-// (keep-alive reuses the connection) until the time budget is spent.
-private const val DOWNLOAD_URL = "$SPEED_HOST/__down?bytes=50000000"
-private const val TEST_DURATION_MS = 8_000L
+// Byte budgets keep a complete test (download + upload + pings) under 49 MB.
+// Each phase is also time-capped so slow links still finish promptly; speed
+// is computed from whatever actually transferred.
+private const val DOWNLOAD_BYTES = 33_000_000L
+private const val UPLOAD_BYTES = 16_000_000L
+private const val PHASE_TIME_CAP_MS = 8_000L
+private const val DOWNLOAD_URL = "$SPEED_HOST/__down?bytes=$DOWNLOAD_BYTES"
+private const val UPLOAD_URL = "$SPEED_HOST/__up"
 
 fun readNetworkStatus(context: Context): NetStatus {
     val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -163,8 +167,10 @@ fun NetworkStatusWidget(status: NetStatus, modifier: Modifier = Modifier) {
 fun SpeedTestInline(modifier: Modifier = Modifier) {
     val scope = rememberCoroutineScope()
     var running by remember { mutableStateOf(false) }
+    var uploadPhase by remember { mutableStateOf(false) }
     var latencyMs by remember { mutableStateOf<Long?>(null) }
-    var finalMbps by remember { mutableStateOf<Double?>(null) }
+    var finalDown by remember { mutableStateOf<Double?>(null) }
+    var finalUp by remember { mutableStateOf<Double?>(null) }
     var liveMbps by remember { mutableStateOf<Double?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var job by remember { mutableStateOf<Job?>(null) }
@@ -172,13 +178,18 @@ fun SpeedTestInline(modifier: Modifier = Modifier) {
     fun start() {
         error = null
         latencyMs = null
-        finalMbps = null
+        finalDown = null
+        finalUp = null
         liveMbps = null
+        uploadPhase = false
         running = true
         job = scope.launch {
             try {
                 latencyMs = measureLatencyMs()
-                finalMbps = measureDownloadMbps { liveMbps = it }
+                finalDown = measureDownloadMbps { liveMbps = it }
+                uploadPhase = true
+                liveMbps = null
+                finalUp = measureUploadMbps { liveMbps = it }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -202,8 +213,9 @@ fun SpeedTestInline(modifier: Modifier = Modifier) {
         }
         when {
             running -> Text(
-                text = liveMbps?.let { "%.1f Mbps…".format(it) }
-                    ?: stringResource(R.string.speedtest_testing),
+                text = liveMbps?.let {
+                    "%s %.1f Mbps…".format(if (uploadPhase) "↑" else "↓", it)
+                } ?: stringResource(R.string.speedtest_testing),
                 color = Color(0xFFBBBBBB),
                 fontSize = 14.sp,
             )
@@ -215,10 +227,11 @@ fun SpeedTestInline(modifier: Modifier = Modifier) {
                 modifier = Modifier.widthIn(max = 320.dp),
             )
 
-            finalMbps != null -> Text(
+            finalDown != null && finalUp != null -> Text(
                 text = stringResource(
                     R.string.speedtest_result,
-                    "%.1f".format(finalMbps),
+                    "%.1f".format(finalDown),
+                    "%.1f".format(finalUp),
                     latencyMs ?: 0L,
                 ),
                 color = Color.White,
@@ -247,38 +260,76 @@ private suspend fun measureLatencyMs(): Long = withContext(Dispatchers.IO) {
 
 private suspend fun measureDownloadMbps(onProgress: (Double) -> Unit): Double =
     withContext(Dispatchers.IO) {
-        val buffer = ByteArray(64 * 1024)
-        var totalBytes = 0L
-        val start = SystemClock.elapsedRealtime()
-        var lastUpdate = start
-
-        fun elapsed() = SystemClock.elapsedRealtime() - start
-
-        while (elapsed() < TEST_DURATION_MS) {
-            ensureActive()
-            val conn = (URL(DOWNLOAD_URL).openConnection() as HttpURLConnection).apply {
-                connectTimeout = 10_000
-                readTimeout = 15_000
-                setRequestProperty("Cache-Control", "no-cache")
-            }
+        val conn = (URL(DOWNLOAD_URL).openConnection() as HttpURLConnection).apply {
+            connectTimeout = 10_000
+            readTimeout = 15_000
+            setRequestProperty("Cache-Control", "no-cache")
+        }
+        try {
             conn.inputStream.use { input ->
-                while (elapsed() < TEST_DURATION_MS) {
+                val buffer = ByteArray(64 * 1024)
+                var totalBytes = 0L
+                val start = SystemClock.elapsedRealtime()
+                var lastUpdate = start
+                while (true) {
                     ensureActive()
                     val read = input.read(buffer)
                     if (read < 0) break
                     totalBytes += read
                     val now = SystemClock.elapsedRealtime()
+                    if (now - start >= PHASE_TIME_CAP_MS) break
                     if (now - lastUpdate >= 250) {
                         lastUpdate = now
                         onProgress(toMbps(totalBytes, now - start))
                     }
                 }
+                toMbps(totalBytes, maxOf(1, SystemClock.elapsedRealtime() - start))
             }
-            // Only sever the connection when the window expired mid-response;
-            // fully-read responses go back to the keep-alive pool for reuse.
-            if (elapsed() >= TEST_DURATION_MS) conn.disconnect()
+        } finally {
+            conn.disconnect()
         }
-        toMbps(totalBytes, maxOf(1, elapsed()))
+    }
+
+/**
+ * Streams zero-bytes (no device data) to the upload endpoint until the byte
+ * budget or time cap is hit. The clock includes draining the server response,
+ * which offsets socket-buffer inflation on slow uplinks.
+ */
+private suspend fun measureUploadMbps(onProgress: (Double) -> Unit): Double =
+    withContext(Dispatchers.IO) {
+        val conn = (URL(UPLOAD_URL).openConnection() as HttpURLConnection).apply {
+            connectTimeout = 10_000
+            readTimeout = 15_000
+            requestMethod = "POST"
+            doOutput = true
+            setChunkedStreamingMode(64 * 1024)
+            setRequestProperty("Content-Type", "application/octet-stream")
+            setRequestProperty("Cache-Control", "no-cache")
+        }
+        try {
+            val chunk = ByteArray(64 * 1024)
+            var totalBytes = 0L
+            val start = SystemClock.elapsedRealtime()
+            var lastUpdate = start
+            conn.outputStream.use { out ->
+                while (totalBytes < UPLOAD_BYTES) {
+                    ensureActive()
+                    out.write(chunk)
+                    totalBytes += chunk.size
+                    val now = SystemClock.elapsedRealtime()
+                    if (now - start >= PHASE_TIME_CAP_MS) break
+                    if (now - lastUpdate >= 250) {
+                        lastUpdate = now
+                        onProgress(toMbps(totalBytes, now - start))
+                    }
+                }
+                out.flush()
+            }
+            conn.inputStream.use { it.readBytes() }
+            toMbps(totalBytes, maxOf(1, SystemClock.elapsedRealtime() - start))
+        } finally {
+            conn.disconnect()
+        }
     }
 
 private fun toMbps(bytes: Long, elapsedMs: Long): Double =

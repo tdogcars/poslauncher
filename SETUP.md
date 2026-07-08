@@ -78,9 +78,10 @@ following the device's locale and 12/24-hour clock setting.
 
 **Network widget:** the top-left corner shows the current connection (green
 dot plus the Wi-Fi network name, or Ethernet/Mobile data/Offline) with a
-"Run speed test" button directly beneath it. The test shows live download
-Mbps while running and "Mbps · latency" when done, all without leaving the
-home screen. On first launch while on Wi-Fi the app asks once for the
+"Run speed test" button directly beneath it. The test measures latency,
+download, and upload ("↓ ↑ Mbps · ms") without leaving the home screen, and
+a complete run transfers at most 49 MB (33 MB down, 16 MB up, less on slow
+links thanks to per-phase time caps). On first launch while on Wi-Fi the app asks once for the
 location permission — Android requires it before revealing the SSID; if
 denied, the label just says "Wi-Fi" and everything else still works. Reading
 the SSID also requires device location services to be enabled.
@@ -139,10 +140,12 @@ adb shell cmd package set-home-activity com.blurredlimes.pivotlauncher/.MainActi
 
 ## Notes
 
-- **Network access is speed-test-only.** The app makes exactly one kind of
-  network request: downloading test data from `speed.cloudflare.com` when the
-  user taps "Run speed test" in the network panel. There is no background
-  traffic, nothing is uploaded, and there are no analytics or telemetry.
+- **Network access is speed-test-only.** The app talks to the network only
+  when the user taps "Run speed test": it downloads test data from
+  `speed.cloudflare.com` and uploads meaningless zero-bytes to the same host
+  to measure uplink speed — no device data ever leaves the terminal. There is
+  no background traffic and no analytics or telemetry. A full test transfers
+  at most 49 MB.
 - **minSdk 24 (Android 7.0).** Chosen because deployed POS AIO hardware
   (Sunmi T2/V2 era, older Elo I-Series, generic units) commonly ships Android
   7.1–11. Cost: no adaptive app icon for the launcher itself (a plain vector
