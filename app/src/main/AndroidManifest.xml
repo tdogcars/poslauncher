@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- INTERNET is used exclusively by the user-triggered speed test in the
+         network panel (download from speed.cloudflare.com); there is no other
+         network traffic and no telemetry. FINE_LOCATION exists only because
+         Android gates reading the connected Wi-Fi SSID behind it. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
     <!-- Android 11+ package visibility: without this, PackageManager cannot see
          the POS app or enumerate launchable apps for the technician picker. -->
     <queries>

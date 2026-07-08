@@ -1,7 +1,11 @@
 package com.blurredlimes.pivotlauncher
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.text.format.DateFormat as AndroidDateFormat
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -28,6 +32,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -46,6 +51,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import kotlinx.coroutines.delay
 import java.text.DateFormat
@@ -123,6 +129,35 @@ fun HomeScreen(config: LauncherConfig, onOpenSettings: () -> Unit) {
                 .padding(24.dp),
         )
 
+        // Network status pill, top-left. Tapping opens the in-place panel; the
+        // first tap on Wi-Fi asks for location, which Android requires before
+        // it will reveal the SSID.
+        var showNetworkPanel by remember { mutableStateOf(false) }
+        var permissionTick by remember { mutableIntStateOf(0) }
+        val netStatus = rememberNetworkStatus(refresh, permissionTick)
+        val locationPermission = rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { permissionTick++ }
+
+        NetworkStatusWidget(
+            status = netStatus,
+            onClick = {
+                val needsLocation = netStatus.type == NetType.WIFI &&
+                    netStatus.name == null &&
+                    ContextCompat.checkSelfPermission(
+                        context, Manifest.permission.ACCESS_FINE_LOCATION
+                    ) != PackageManager.PERMISSION_GRANTED
+                if (needsLocation) {
+                    locationPermission.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                }
+                showNetworkPanel = true
+            },
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .systemBarsPadding()
+                .padding(16.dp),
+        )
+
         when (val state = lookup) {
             HomeApps.Loading -> Unit // stays pure black while resolving
 
@@ -147,6 +182,14 @@ fun HomeScreen(config: LauncherConfig, onOpenSettings: () -> Unit) {
                 configured = state.configured,
                 onOpenSettings = onOpenSettings,
                 modifier = Modifier.align(Alignment.Center),
+            )
+        }
+
+        // Last child so it draws over everything else on the home screen.
+        if (showNetworkPanel) {
+            NetworkPanel(
+                status = netStatus,
+                onDismiss = { showNetworkPanel = false },
             )
         }
     }

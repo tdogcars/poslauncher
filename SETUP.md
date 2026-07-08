@@ -76,6 +76,13 @@ There is no visible settings button. The configuration screen lets you:
 The home screen also shows the device date and time in the top-right corner,
 following the device's locale and 12/24-hour clock setting.
 
+**Network widget:** the top-left pill shows the current connection (green dot
+plus the Wi-Fi network name, or Ethernet/Mobile data/Offline). Tapping it opens
+an in-place panel with a download speed test (latency + Mbps). The first tap on
+Wi-Fi asks for the location permission — Android requires it before revealing
+the SSID; if denied, the pill just says "Wi-Fi" and everything else still
+works. Reading the SSID also requires device location services to be enabled.
+
 Tap **Done** (or the Back button) to return. Settings persist across reboots.
 
 If the configured app isn't installed, the home screen shows a diagnostic
@@ -130,8 +137,10 @@ adb shell cmd package set-home-activity com.blurredlimes.pivotlauncher/.MainActi
 
 ## Notes
 
-- **No network access.** The app declares no INTERNET permission, makes no
-  network calls, and contains no analytics or telemetry.
+- **Network access is speed-test-only.** The app makes exactly one kind of
+  network request: downloading test data from `speed.cloudflare.com` when the
+  user taps "Run speed test" in the network panel. There is no background
+  traffic, nothing is uploaded, and there are no analytics or telemetry.
 - **minSdk 24 (Android 7.0).** Chosen because deployed POS AIO hardware
   (Sunmi T2/V2 era, older Elo I-Series, generic units) commonly ships Android
   7.1–11. Cost: no adaptive app icon for the launcher itself (a plain vector
