@@ -11,18 +11,18 @@
     <string name="default_home_continue">Continue without setting</string>
     <string name="default_home_manual_hint">Open Settings → Apps → Default apps → Home app and choose Pivot Launcher.</string>
 
-    <string name="missing_title">POS app not available</string>
-    <string name="missing_package">Configured package: %1$s</string>
-    <string name="missing_hint">Install the POS app, or long-press anywhere on the screen for two seconds to open launcher settings.</string>
+    <string name="missing_title">No configured apps available</string>
+    <string name="missing_package">Configured: %1$s</string>
+    <string name="missing_none">none</string>
+    <string name="missing_hint">Install the configured apps, or long-press anywhere on the screen for two seconds to open launcher settings.</string>
     <string name="missing_open_settings">Launcher settings</string>
 
     <string name="settings_title">Launcher configuration</string>
     <string name="settings_done">Done</string>
     <string name="settings_icon_size">Icon size</string>
     <string name="settings_icon_size_value">%1$d dp</string>
-    <string name="settings_choose_app">POS application</string>
-    <string name="settings_current_package">Current: %1$s</string>
-    <string name="settings_current_not_installed">Current: %1$s (not installed)</string>
+    <string name="settings_choose_app">Home screen apps</string>
+    <string name="settings_selected_count">%1$d selected</string>
     <string name="settings_loading_apps">Loading installed apps…</string>
     <string name="settings_no_apps">No launchable apps found on this device.</string>
 </resources>

@@ -6,10 +6,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -43,10 +47,12 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 /** How long a finger must stay down on empty background to open configuration. */
 private const val CONFIGURE_HOLD_MILLIS = 2000L
 
-private sealed interface PosLookup {
-    data object Loading : PosLookup
-    data object Missing : PosLookup
-    data class Found(val app: InstalledApp) : PosLookup
+private sealed interface HomeApps {
+    data object Loading : HomeApps
+    data class Loaded(val apps: List<InstalledApp>) : HomeApps
+
+    /** None of the configured packages resolved to a launchable app. */
+    data class Empty(val configured: List<String>) : HomeApps
 }
 
 /**
@@ -66,35 +72,36 @@ private fun Modifier.holdToConfigure(onHold: () -> Unit): Modifier =
         }
     }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HomeScreen(config: LauncherConfig, onOpenSettings: () -> Unit) {
     val context = LocalContext.current
     val haptics = LocalHapticFeedback.current
     val iconSizePx = with(LocalDensity.current) { config.iconSizeDp.dp.roundToPx() }
 
-    // Bumped on every resume so reinstalling the POS app recovers immediately,
-    // and after a failed launch so the UI falls back to the diagnostic screen.
+    // Bumped on every resume so installing/removing configured apps is picked
+    // up immediately, and after a failed launch so the tile set re-resolves.
     var refresh by remember { mutableIntStateOf(0) }
     LifecycleResumeEffect(Unit) {
         refresh++
         onPauseOrDispose { }
     }
 
-    val lookup by produceState<PosLookup>(
-        initialValue = PosLookup.Loading,
-        config.posPackage, iconSizePx, refresh,
+    val lookup by produceState<HomeApps>(
+        initialValue = HomeApps.Loading,
+        config.posPackages, iconSizePx, refresh,
     ) {
-        value = resolvePosApp(context, config.posPackage, iconSizePx)
-            ?.let { PosLookup.Found(it) }
-            ?: PosLookup.Missing
+        val resolved = config.posPackages.mapNotNull { resolvePosApp(context, it, iconSizePx) }
+        value = if (resolved.isEmpty()) HomeApps.Empty(config.posPackages)
+        else HomeApps.Loaded(resolved)
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Background layer: any press on empty space lands here. Content is
-        // stacked on top, so presses on the icon never reach this gesture.
+        // stacked on top, so presses on the tiles never reach this gesture.
         Box(
             modifier = Modifier
-                .matchParentSize()
+                .fillMaxSize()
                 .holdToConfigure {
                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                     onOpenSettings()
@@ -102,17 +109,27 @@ fun HomeScreen(config: LauncherConfig, onOpenSettings: () -> Unit) {
         )
 
         when (val state = lookup) {
-            PosLookup.Loading -> Unit // stays pure black while resolving
+            HomeApps.Loading -> Unit // stays pure black while resolving
 
-            is PosLookup.Found -> PosAppIcon(
-                app = state.app,
-                iconSizeDp = config.iconSizeDp,
-                onLaunchFailed = { refresh++ },
-                modifier = Modifier.align(Alignment.Center),
-            )
+            is HomeApps.Loaded -> FlowRow(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .fillMaxWidth()
+                    .padding(horizontal = 48.dp, vertical = 32.dp),
+                horizontalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterHorizontally),
+                verticalArrangement = Arrangement.spacedBy(24.dp),
+            ) {
+                state.apps.forEach { app ->
+                    AppTile(
+                        app = app,
+                        iconSizeDp = config.iconSizeDp,
+                        onLaunchFailed = { refresh++ },
+                    )
+                }
+            }
 
-            PosLookup.Missing -> MissingPosApp(
-                packageName = config.posPackage,
+            is HomeApps.Empty -> MissingApps(
+                configured = state.configured,
                 onOpenSettings = onOpenSettings,
                 modifier = Modifier.align(Alignment.Center),
             )
@@ -121,7 +138,7 @@ fun HomeScreen(config: LauncherConfig, onOpenSettings: () -> Unit) {
 }
 
 @Composable
-private fun PosAppIcon(
+private fun AppTile(
     app: InstalledApp,
     iconSizeDp: Int,
     onLaunchFailed: () -> Unit,
@@ -158,8 +175,8 @@ private fun PosAppIcon(
 }
 
 @Composable
-private fun MissingPosApp(
-    packageName: String,
+private fun MissingApps(
+    configured: List<String>,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -177,7 +194,11 @@ private fun MissingPosApp(
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = stringResource(R.string.missing_package, packageName),
+            text = stringResource(
+                R.string.missing_package,
+                if (configured.isEmpty()) stringResource(R.string.missing_none)
+                else configured.joinToString("\n"),
+            ),
             color = Color(0xFFBBBBBB),
             fontSize = 16.sp,
             fontFamily = FontFamily.Monospace,

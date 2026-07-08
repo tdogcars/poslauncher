@@ -1,7 +1,7 @@
 # Pivot Launcher — Technician Setup
 
-A minimal home-screen replacement for Android POS terminals. It shows one thing:
-the Pivot POS app icon on a pure black screen. This is **not** kiosk lockdown —
+A minimal home-screen replacement for Android POS terminals. It shows only the
+apps you select (Pivot POS by default) as centered icons on a pure black screen. This is **not** kiosk lockdown —
 staff can still reach Recents and the notification shade; that is by design.
 
 - Default POS package: `com.blurredlimes.pivotpos` (changeable in settings)
@@ -67,9 +67,10 @@ Tap it — the POS app opens. Press Home again — you're back on the black scre
 **Long-press anywhere on the empty black background and hold for ~2 seconds.**
 There is no visible settings button. The configuration screen lets you:
 
-- Pick the POS application from a list of installed apps (pre-set to
-  `com.blurredlimes.pivotpos`)
-- Adjust the icon size (96–320 dp)
+- Check the apps to show on the home screen from a list of installed apps
+  (pre-set to `com.blurredlimes.pivotpos`). Icons appear in the order you
+  check them.
+- Adjust the icon size (96–320 dp, default 125)
 
 Tap **Done** (or the Back button) to return. Settings persist across reboots.
 

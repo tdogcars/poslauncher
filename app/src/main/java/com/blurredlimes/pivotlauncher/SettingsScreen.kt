@@ -18,8 +18,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -59,8 +59,6 @@ fun SettingsScreen(config: LauncherConfig, onDone: () -> Unit) {
         mutableFloatStateOf(config.iconSizeDp.toFloat())
     }
 
-    val currentInstalled = apps?.any { it.packageName == config.posPackage }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -76,13 +74,11 @@ fun SettingsScreen(config: LauncherConfig, onDone: () -> Unit) {
                 )
                 Text(
                     text = stringResource(
-                        if (currentInstalled == false) R.string.settings_current_not_installed
-                        else R.string.settings_current_package,
-                        config.posPackage,
+                        R.string.settings_selected_count,
+                        config.posPackages.size,
                     ),
                     color = Color(0xFF999999),
                     fontSize = 13.sp,
-                    fontFamily = FontFamily.Monospace,
                 )
             }
             TextButton(onClick = onDone) {
@@ -150,12 +146,18 @@ fun SettingsScreen(config: LauncherConfig, onDone: () -> Unit) {
 
             else -> LazyColumn(modifier = Modifier.weight(1f)) {
                 items(apps.orEmpty(), key = { it.packageName }) { app ->
+                    val selected = app.packageName in config.posPackages
                     AppRow(
                         app = app,
-                        selected = app.packageName == config.posPackage,
-                        onSelect = {
+                        selected = selected,
+                        onToggle = {
+                            // Selection order is preserved: newly checked apps
+                            // append to the end of the home screen.
+                            val updated =
+                                if (selected) config.posPackages - app.packageName
+                                else config.posPackages + app.packageName
                             scope.launch {
-                                LauncherPrefs.setPosPackage(context, app.packageName)
+                                LauncherPrefs.setPosPackages(context, updated)
                             }
                         },
                     )
@@ -166,13 +168,13 @@ fun SettingsScreen(config: LauncherConfig, onDone: () -> Unit) {
 }
 
 @Composable
-private fun AppRow(app: InstalledApp, selected: Boolean, onSelect: () -> Unit) {
+private fun AppRow(app: InstalledApp, selected: Boolean, onToggle: () -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onSelect)
+            .clickable(onClick = onToggle)
             .background(if (selected) Color(0x14FFFFFF) else Color.Transparent)
             .padding(horizontal = 12.dp, vertical = 10.dp),
     ) {
@@ -191,6 +193,6 @@ private fun AppRow(app: InstalledApp, selected: Boolean, onSelect: () -> Unit) {
                 fontFamily = FontFamily.Monospace,
             )
         }
-        RadioButton(selected = selected, onClick = null)
+        Checkbox(checked = selected, onCheckedChange = null)
     }
 }
