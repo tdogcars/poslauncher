@@ -43,6 +43,14 @@ Settings → Security on Android 7).
 
 ## 3. Set as the default home app
 
+**Just open the app.** On first launch, if Pivot Launcher is not yet the
+default home app, it prompts automatically: on Android 10+ you get the system
+"set as default" dialog directly; on Android 7.0–9 it opens the Home-app
+settings page. The prompt screen stays (with retry buttons) until the default
+is set, and disappears permanently once it is. Android does not allow an app
+to seize the home role silently, so one confirmation tap is required.
+
+Manual route, if you prefer:
 Settings → **Apps → Default apps → Home app** → choose **Pivot Launcher**.
 
 On some Android versions and OEM skins that menu is missing or buried. In that

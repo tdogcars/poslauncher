@@ -4,6 +4,13 @@
 
     <string name="launch_failed">Could not open %1$s</string>
 
+    <string name="default_home_title">Make Pivot Launcher the home app</string>
+    <string name="default_home_body">Choose Pivot Launcher and tap “Always” so the Home button always returns to the POS screen.</string>
+    <string name="default_home_set">Set as default home app</string>
+    <string name="default_home_open_settings">Open home settings</string>
+    <string name="default_home_continue">Continue without setting</string>
+    <string name="default_home_manual_hint">Open Settings → Apps → Default apps → Home app and choose Pivot Launcher.</string>
+
     <string name="missing_title">POS app not available</string>
     <string name="missing_package">Configured package: %1$s</string>
     <string name="missing_hint">Install the POS app, or long-press anywhere on the screen for two seconds to open launcher settings.</string>

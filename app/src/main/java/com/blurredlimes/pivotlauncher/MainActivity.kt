@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 class MainActivity : ComponentActivity() {
@@ -58,6 +59,17 @@ private fun LauncherApp(homeIntentTick: Int) {
         .collectAsStateWithLifecycle(initialValue = null)
     var showSettings by remember { mutableStateOf(false) }
 
+    // Re-checked on every resume so the prompt disappears the moment the user
+    // picks this launcher as default (and reappears if the default is revoked).
+    var defaultCheckTick by remember { mutableIntStateOf(0) }
+    LifecycleResumeEffect(Unit) {
+        defaultCheckTick++
+        onPauseOrDispose { }
+    }
+    val isDefaultHome = remember(defaultCheckTick) { isDefaultLauncher(context) }
+    var promptDismissed by remember { mutableStateOf(false) }
+    var autoRequested by remember { mutableStateOf(false) }
+
     // A HOME press always lands on the icon screen, even if the device was
     // left sitting in configuration.
     LaunchedEffect(homeIntentTick) { showSettings = false }
@@ -66,10 +78,23 @@ private fun LauncherApp(homeIntentTick: Int) {
         Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
             // Until DataStore emits, render nothing: the frame is already black.
             val loaded = config ?: return@Box
-            if (showSettings) {
-                SettingsScreen(config = loaded, onDone = { showSettings = false })
-            } else {
-                HomeScreen(config = loaded, onOpenSettings = { showSettings = true })
+            when {
+                showSettings -> SettingsScreen(
+                    config = loaded,
+                    onDone = { showSettings = false },
+                )
+
+                !isDefaultHome && !promptDismissed -> DefaultHomePrompt(
+                    autoRequest = !autoRequested,
+                    onAutoRequested = { autoRequested = true },
+                    onRecheck = { defaultCheckTick++ },
+                    onContinue = { promptDismissed = true },
+                )
+
+                else -> HomeScreen(
+                    config = loaded,
+                    onOpenSettings = { showSettings = true },
+                )
             }
         }
     }
