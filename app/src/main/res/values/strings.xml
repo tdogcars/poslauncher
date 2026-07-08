@@ -21,8 +21,12 @@
     <string name="settings_done">Done</string>
     <string name="settings_icon_size">Icon size</string>
     <string name="settings_icon_size_value">%1$d dp</string>
-    <string name="settings_choose_app">Home screen apps</string>
     <string name="settings_selected_count">%1$d selected</string>
+    <string name="settings_section_selected">Shown on home screen (in order)</string>
+    <string name="settings_section_available">Available apps</string>
+    <string name="settings_not_installed">(not installed)</string>
+    <string name="settings_move_up">Move up</string>
+    <string name="settings_move_down">Move down</string>
     <string name="settings_loading_apps">Loading installed apps…</string>
     <string name="settings_no_apps">No launchable apps found on this device.</string>
 </resources>

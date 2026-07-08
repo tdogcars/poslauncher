@@ -1,5 +1,6 @@
 package com.blurredlimes.pivotlauncher
 
+import android.text.format.DateFormat as AndroidDateFormat
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -17,13 +18,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -43,6 +47,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import kotlinx.coroutines.delay
+import java.text.DateFormat
+import java.util.Date
 
 /** How long a finger must stay down on empty background to open configuration. */
 private const val CONFIGURE_HOLD_MILLIS = 2000L
@@ -108,6 +115,14 @@ fun HomeScreen(config: LauncherConfig, onOpenSettings: () -> Unit) {
                 }
         )
 
+        ClockDisplay(
+            refreshKey = refresh,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .systemBarsPadding()
+                .padding(24.dp),
+        )
+
         when (val state = lookup) {
             HomeApps.Loading -> Unit // stays pure black while resolving
 
@@ -134,6 +149,42 @@ fun HomeScreen(config: LauncherConfig, onOpenSettings: () -> Unit) {
                 modifier = Modifier.align(Alignment.Center),
             )
         }
+    }
+}
+
+/**
+ * Device date and time, updated on the minute. Formats follow the device's
+ * locale and 12/24-hour setting. Not clickable: touches over it fall through
+ * to the hold-to-configure background layer.
+ */
+@Composable
+private fun ClockDisplay(refreshKey: Int, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+
+    // Re-keyed on resume so the clock snaps to the correct time immediately
+    // after the screen wakes instead of waiting out a stale minute delay.
+    LaunchedEffect(refreshKey) {
+        while (true) {
+            now = System.currentTimeMillis()
+            delay(60_000L - (now % 60_000L) + 50L)
+        }
+    }
+
+    val timeFormat = remember(context) { AndroidDateFormat.getTimeFormat(context) }
+    val dateFormat = remember { DateFormat.getDateInstance(DateFormat.FULL) }
+
+    Column(modifier = modifier, horizontalAlignment = Alignment.End) {
+        Text(
+            text = timeFormat.format(Date(now)),
+            color = Color.White,
+            fontSize = 32.sp,
+        )
+        Text(
+            text = dateFormat.format(Date(now)),
+            color = Color(0xFF999999),
+            fontSize = 15.sp,
+        )
     }
 }
 

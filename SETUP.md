@@ -68,9 +68,13 @@ Tap it — the POS app opens. Press Home again — you're back on the black scre
 There is no visible settings button. The configuration screen lets you:
 
 - Check the apps to show on the home screen from a list of installed apps
-  (pre-set to `com.blurredlimes.pivotpos`). Icons appear in the order you
-  check them.
+  (pre-set to `com.blurredlimes.pivotpos`). Selected apps appear in a
+  "Shown on home screen" section with ▲/▼ buttons to set the display order;
+  unchecking removes an app.
 - Adjust the icon size (96–320 dp, default 125)
+
+The home screen also shows the device date and time in the top-right corner,
+following the device's locale and 12/24-hour clock setting.
 
 Tap **Done** (or the Back button) to return. Settings persist across reboots.
 

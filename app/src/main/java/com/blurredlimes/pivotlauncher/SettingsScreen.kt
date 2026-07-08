@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,9 +18,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -58,6 +65,23 @@ fun SettingsScreen(config: LauncherConfig, onDone: () -> Unit) {
     var sliderValue by remember(config.iconSizeDp) {
         mutableFloatStateOf(config.iconSizeDp.toFloat())
     }
+
+    fun savePackages(packages: List<String>) {
+        scope.launch { LauncherPrefs.setPosPackages(context, packages) }
+    }
+
+    fun move(packageName: String, delta: Int) {
+        val list = config.posPackages.toMutableList()
+        val from = list.indexOf(packageName)
+        val to = from + delta
+        if (from == -1 || to !in list.indices) return
+        list[from] = list[to].also { list[to] = list[from] }
+        savePackages(list)
+    }
+
+    // Selected apps in their home-screen order; unselected alphabetical below.
+    val installedByPackage = apps.orEmpty().associateBy { it.packageName }
+    val unselected = apps.orEmpty().filter { it.packageName !in config.posPackages }
 
     Column(
         modifier = Modifier
@@ -124,13 +148,6 @@ fun SettingsScreen(config: LauncherConfig, onDone: () -> Unit) {
         HorizontalDivider(color = Color(0xFF222222))
         Spacer(modifier = Modifier.height(12.dp))
 
-        Text(
-            text = stringResource(R.string.settings_choose_app),
-            color = Color.White,
-            fontSize = 16.sp,
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
         when {
             apps == null -> Text(
                 text = stringResource(R.string.settings_loading_apps),
@@ -145,21 +162,33 @@ fun SettingsScreen(config: LauncherConfig, onDone: () -> Unit) {
             )
 
             else -> LazyColumn(modifier = Modifier.weight(1f)) {
-                items(apps.orEmpty(), key = { it.packageName }) { app ->
-                    val selected = app.packageName in config.posPackages
-                    AppRow(
+                if (config.posPackages.isNotEmpty()) {
+                    item(key = "header_selected") {
+                        SectionHeader(stringResource(R.string.settings_section_selected))
+                    }
+                    itemsIndexed(
+                        config.posPackages,
+                        key = { _, pkg -> pkg },
+                    ) { index, pkg ->
+                        SelectedAppRow(
+                            app = installedByPackage[pkg],
+                            packageName = pkg,
+                            canMoveUp = index > 0,
+                            canMoveDown = index < config.posPackages.lastIndex,
+                            onMoveUp = { move(pkg, -1) },
+                            onMoveDown = { move(pkg, +1) },
+                            onRemove = { savePackages(config.posPackages - pkg) },
+                        )
+                    }
+                    item(key = "header_available") {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        SectionHeader(stringResource(R.string.settings_section_available))
+                    }
+                }
+                items(unselected, key = { it.packageName }) { app ->
+                    AvailableAppRow(
                         app = app,
-                        selected = selected,
-                        onToggle = {
-                            // Selection order is preserved: newly checked apps
-                            // append to the end of the home screen.
-                            val updated =
-                                if (selected) config.posPackages - app.packageName
-                                else config.posPackages + app.packageName
-                            scope.launch {
-                                LauncherPrefs.setPosPackages(context, updated)
-                            }
-                        },
+                        onAdd = { savePackages(config.posPackages + app.packageName) },
                     )
                 }
             }
@@ -168,14 +197,88 @@ fun SettingsScreen(config: LauncherConfig, onDone: () -> Unit) {
 }
 
 @Composable
-private fun AppRow(app: InstalledApp, selected: Boolean, onToggle: () -> Unit) {
+private fun SectionHeader(text: String) {
+    Text(
+        text = text,
+        color = Color.White,
+        fontSize = 16.sp,
+        modifier = Modifier.padding(vertical = 8.dp),
+    )
+}
+
+@Composable
+private fun SelectedAppRow(
+    app: InstalledApp?,
+    packageName: String,
+    canMoveUp: Boolean,
+    canMoveDown: Boolean,
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit,
+    onRemove: () -> Unit,
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onToggle)
-            .background(if (selected) Color(0x14FFFFFF) else Color.Transparent)
+            .background(Color(0x14FFFFFF))
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+    ) {
+        if (app != null) {
+            Image(
+                bitmap = app.icon,
+                contentDescription = null,
+                modifier = Modifier.size(44.dp),
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0xFF1A1A1A)),
+            )
+        }
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = app?.label ?: stringResource(R.string.settings_not_installed),
+                color = if (app != null) Color.White else Color(0xFF777777),
+                fontSize = 16.sp,
+            )
+            Text(
+                text = packageName,
+                color = Color(0xFF888888),
+                fontSize = 12.sp,
+                fontFamily = FontFamily.Monospace,
+            )
+        }
+        IconButton(onClick = onMoveUp, enabled = canMoveUp) {
+            Icon(
+                imageVector = Icons.Filled.KeyboardArrowUp,
+                contentDescription = stringResource(R.string.settings_move_up),
+                tint = if (canMoveUp) Color.White else Color(0xFF444444),
+            )
+        }
+        IconButton(onClick = onMoveDown, enabled = canMoveDown) {
+            Icon(
+                imageVector = Icons.Filled.KeyboardArrowDown,
+                contentDescription = stringResource(R.string.settings_move_down),
+                tint = if (canMoveDown) Color.White else Color(0xFF444444),
+            )
+        }
+        Checkbox(checked = true, onCheckedChange = { onRemove() })
+    }
+    Spacer(modifier = Modifier.height(6.dp))
+}
+
+@Composable
+private fun AvailableAppRow(app: InstalledApp, onAdd: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onAdd)
             .padding(horizontal = 12.dp, vertical = 10.dp),
     ) {
         Image(
@@ -193,6 +296,6 @@ private fun AppRow(app: InstalledApp, selected: Boolean, onToggle: () -> Unit) {
                 fontFamily = FontFamily.Monospace,
             )
         }
-        Checkbox(checked = selected, onCheckedChange = null)
+        Checkbox(checked = false, onCheckedChange = { onAdd() })
     }
 }
