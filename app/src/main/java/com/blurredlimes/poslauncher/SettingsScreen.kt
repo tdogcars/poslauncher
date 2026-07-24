@@ -4,7 +4,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -70,18 +69,23 @@ fun SettingsScreen(config: LauncherConfig, onDone: () -> Unit) {
         scope.launch { LauncherPrefs.setPosPackages(context, packages) }
     }
 
+    // Selected apps in their home-screen order; unselected alphabetical below.
+    // Selections whose app is no longer installed are never shown; any edit
+    // saves the visible list, which prunes them from storage too.
+    val installedByPackage = apps.orEmpty().associateBy { it.packageName }
+    val selectedInstalled =
+        if (apps == null) config.posPackages
+        else config.posPackages.filter { it in installedByPackage }
+    val unselected = apps.orEmpty().filter { it.packageName !in config.posPackages }
+
     fun move(packageName: String, delta: Int) {
-        val list = config.posPackages.toMutableList()
+        val list = selectedInstalled.toMutableList()
         val from = list.indexOf(packageName)
         val to = from + delta
         if (from == -1 || to !in list.indices) return
         list[from] = list[to].also { list[to] = list[from] }
         savePackages(list)
     }
-
-    // Selected apps in their home-screen order; unselected alphabetical below.
-    val installedByPackage = apps.orEmpty().associateBy { it.packageName }
-    val unselected = apps.orEmpty().filter { it.packageName !in config.posPackages }
 
     Column(
         modifier = Modifier
@@ -99,7 +103,7 @@ fun SettingsScreen(config: LauncherConfig, onDone: () -> Unit) {
                 Text(
                     text = stringResource(
                         R.string.settings_selected_count,
-                        config.posPackages.size,
+                        selectedInstalled.size,
                     ),
                     color = Color(0xFF999999),
                     fontSize = 13.sp,
@@ -162,22 +166,21 @@ fun SettingsScreen(config: LauncherConfig, onDone: () -> Unit) {
             )
 
             else -> LazyColumn(modifier = Modifier.weight(1f)) {
-                if (config.posPackages.isNotEmpty()) {
+                if (selectedInstalled.isNotEmpty()) {
                     item(key = "header_selected") {
                         SectionHeader(stringResource(R.string.settings_section_selected))
                     }
                     itemsIndexed(
-                        config.posPackages,
+                        selectedInstalled,
                         key = { _, pkg -> pkg },
                     ) { index, pkg ->
                         SelectedAppRow(
-                            app = installedByPackage[pkg],
-                            packageName = pkg,
+                            app = installedByPackage.getValue(pkg),
                             canMoveUp = index > 0,
-                            canMoveDown = index < config.posPackages.lastIndex,
+                            canMoveDown = index < selectedInstalled.lastIndex,
                             onMoveUp = { move(pkg, -1) },
                             onMoveDown = { move(pkg, +1) },
-                            onRemove = { savePackages(config.posPackages - pkg) },
+                            onRemove = { savePackages(selectedInstalled - pkg) },
                         )
                     }
                     item(key = "header_available") {
@@ -188,7 +191,7 @@ fun SettingsScreen(config: LauncherConfig, onDone: () -> Unit) {
                 items(unselected, key = { it.packageName }) { app ->
                     AvailableAppRow(
                         app = app,
-                        onAdd = { savePackages(config.posPackages + app.packageName) },
+                        onAdd = { savePackages(selectedInstalled + app.packageName) },
                     )
                 }
             }
@@ -208,8 +211,7 @@ private fun SectionHeader(text: String) {
 
 @Composable
 private fun SelectedAppRow(
-    app: InstalledApp?,
-    packageName: String,
+    app: InstalledApp,
     canMoveUp: Boolean,
     canMoveDown: Boolean,
     onMoveUp: () -> Unit,
@@ -224,29 +226,16 @@ private fun SelectedAppRow(
             .background(Color(0x14FFFFFF))
             .padding(horizontal = 12.dp, vertical = 6.dp),
     ) {
-        if (app != null) {
-            Image(
-                bitmap = app.icon,
-                contentDescription = null,
-                modifier = Modifier.size(44.dp),
-            )
-        } else {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFF1A1A1A)),
-            )
-        }
+        Image(
+            bitmap = app.icon,
+            contentDescription = null,
+            modifier = Modifier.size(44.dp),
+        )
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
+            Text(text = app.label, color = Color.White, fontSize = 16.sp)
             Text(
-                text = app?.label ?: stringResource(R.string.settings_not_installed),
-                color = if (app != null) Color.White else Color(0xFF777777),
-                fontSize = 16.sp,
-            )
-            Text(
-                text = packageName,
+                text = app.packageName,
                 color = Color(0xFF888888),
                 fontSize = 12.sp,
                 fontFamily = FontFamily.Monospace,

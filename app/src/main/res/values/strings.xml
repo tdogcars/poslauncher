@@ -22,7 +22,6 @@
     <string name="settings_selected_count">%1$d selected</string>
     <string name="settings_section_selected">Shown on home screen (in order)</string>
     <string name="settings_section_available">Available apps</string>
-    <string name="settings_not_installed">(not installed)</string>
     <string name="settings_move_up">Move up</string>
     <string name="settings_move_down">Move down</string>
 

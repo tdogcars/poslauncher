@@ -4,7 +4,6 @@ A minimal home-screen replacement for Android POS terminals. It shows only the
 apps you select as centered icons on a pure black screen. This is **not** kiosk lockdown —
 staff can still reach Recents and the notification shade; that is by design.
 
-- Default POS package: `com.blurredlimes.pivotpos` (changeable in settings)
 - Minimum Android version: **7.0 (API 24)**
 
 ## 1. Get the APK
@@ -67,10 +66,10 @@ Tap it — the POS app opens. Press Home again — you're back on the black scre
 **Long-press anywhere on the empty black background and hold for ~2 seconds.**
 There is no visible settings button. The configuration screen lets you:
 
-- Check the apps to show on the home screen from a list of installed apps
-  (pre-set to `com.blurredlimes.pivotpos`). Selected apps appear in a
-  "Shown on home screen" section with ▲/▼ buttons to set the display order;
-  unchecking removes an app.
+- Check the apps to show on the home screen from a list of installed apps.
+  Selected apps appear in a "Shown on home screen" section with ▲/▼ buttons
+  to set the display order; unchecking removes an app. A fresh install starts
+  with nothing selected.
 - Adjust the icon size (96–320 dp, default 125)
 
 The home screen also shows the device date and time in the top-right corner,

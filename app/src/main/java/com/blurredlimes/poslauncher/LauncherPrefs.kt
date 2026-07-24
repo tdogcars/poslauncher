@@ -16,9 +16,6 @@ data class LauncherConfig(
 )
 
 object LauncherPrefs {
-    // Pre-seeded with the POS app package so a standard install needs no typing;
-    // fully changeable from the settings screen.
-    const val DEFAULT_POS_PACKAGE = "com.blurredlimes.pivotpos"
     const val DEFAULT_ICON_SIZE_DP = 125
     val ICON_SIZE_RANGE = 96..320
 
@@ -33,10 +30,13 @@ object LauncherPrefs {
 
     fun configFlow(context: Context): Flow<LauncherConfig> =
         context.dataStore.data.map { prefs ->
+            // No pre-seeded default: a fresh install starts with nothing
+            // selected and the technician picks apps from the settings list.
             val packages = prefs[KEY_POS_PACKAGES]
                 ?.split(',')
                 ?.filter { it.isNotBlank() }
-                ?: listOf(prefs[KEY_POS_PACKAGE_LEGACY] ?: DEFAULT_POS_PACKAGE)
+                ?: prefs[KEY_POS_PACKAGE_LEGACY]?.let { listOf(it) }
+                ?: emptyList()
             LauncherConfig(
                 posPackages = packages,
                 iconSizeDp = (prefs[KEY_ICON_SIZE_DP] ?: DEFAULT_ICON_SIZE_DP)
