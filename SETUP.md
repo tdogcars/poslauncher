@@ -88,10 +88,10 @@ the SSID also requires device location services to be enabled.
 
 Tap **Done** (or the Back button) to return. Settings persist across reboots.
 
-If the configured app isn't installed, the home screen shows a diagnostic
-message with the configured package name instead of an empty void. It re-checks
-every time the screen resumes, so installing the POS app fixes it immediately —
-no reboot needed.
+If none of the selected apps are installed, the home screen shows a prompt
+pointing to the long-press settings gesture instead of an empty void. It
+re-checks every time the screen resumes, so installing the POS app fixes it
+immediately — no reboot needed.
 
 ## 5. Revert to the stock launcher
 

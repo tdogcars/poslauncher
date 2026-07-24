@@ -47,7 +47,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -65,7 +64,7 @@ private sealed interface HomeApps {
     data class Loaded(val apps: List<InstalledApp>) : HomeApps
 
     /** None of the configured packages resolved to a launchable app. */
-    data class Empty(val configured: List<String>) : HomeApps
+    data object Empty : HomeApps
 }
 
 /**
@@ -105,8 +104,7 @@ fun HomeScreen(config: LauncherConfig, onOpenSettings: () -> Unit) {
         config.posPackages, iconSizePx, refresh,
     ) {
         val resolved = config.posPackages.mapNotNull { resolvePosApp(context, it, iconSizePx) }
-        value = if (resolved.isEmpty()) HomeApps.Empty(config.posPackages)
-        else HomeApps.Loaded(resolved)
+        value = if (resolved.isEmpty()) HomeApps.Empty else HomeApps.Loaded(resolved)
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -181,8 +179,7 @@ fun HomeScreen(config: LauncherConfig, onOpenSettings: () -> Unit) {
                 }
             }
 
-            is HomeApps.Empty -> MissingApps(
-                configured = state.configured,
+            HomeApps.Empty -> MissingApps(
                 onOpenSettings = onOpenSettings,
                 modifier = Modifier.align(Alignment.Center),
             )
@@ -265,7 +262,6 @@ private fun AppTile(
 
 @Composable
 private fun MissingApps(
-    configured: List<String>,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -279,18 +275,6 @@ private fun MissingApps(
             text = stringResource(R.string.missing_title),
             color = Color.White,
             fontSize = 24.sp,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = stringResource(
-                R.string.missing_package,
-                if (configured.isEmpty()) stringResource(R.string.missing_none)
-                else configured.joinToString("\n"),
-            ),
-            color = Color(0xFFBBBBBB),
-            fontSize = 16.sp,
-            fontFamily = FontFamily.Monospace,
             textAlign = TextAlign.Center,
         )
         Spacer(modifier = Modifier.height(12.dp))

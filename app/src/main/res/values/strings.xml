@@ -11,10 +11,8 @@
     <string name="default_home_continue">Continue without setting</string>
     <string name="default_home_manual_hint">Open Settings → Apps → Default apps → Home app and choose POS Launcher.</string>
 
-    <string name="missing_title">No configured apps available</string>
-    <string name="missing_package">Configured: %1$s</string>
-    <string name="missing_none">none</string>
-    <string name="missing_hint">Install the configured apps, or long-press anywhere on the screen for two seconds to open launcher settings.</string>
+    <string name="missing_title">No apps selected yet</string>
+    <string name="missing_hint">Long-press anywhere on the screen for two seconds to open launcher settings and choose your apps.</string>
     <string name="missing_open_settings">Launcher settings</string>
 
     <string name="settings_title">Launcher configuration</string>
