@@ -1,4 +1,4 @@
-package com.blurredlimes.pivotlauncher
+package com.blurredlimes.poslauncher
 
 import android.content.Context
 import androidx.datastore.preferences.core.edit
@@ -16,7 +16,7 @@ data class LauncherConfig(
 )
 
 object LauncherPrefs {
-    // Pre-seeded with the Pivot POS package so a standard install needs no typing;
+    // Pre-seeded with the POS app package so a standard install needs no typing;
     // fully changeable from the settings screen.
     const val DEFAULT_POS_PACKAGE = "com.blurredlimes.pivotpos"
     const val DEFAULT_ICON_SIZE_DP = 125

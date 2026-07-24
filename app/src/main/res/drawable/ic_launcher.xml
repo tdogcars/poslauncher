@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- App icon: white ring and pivot dot on black. A plain vector (not adaptive)
+<!-- App icon: white ring and center dot on black. A plain vector (not adaptive)
      so a single resource serves every API level from minSdk 24 up. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"

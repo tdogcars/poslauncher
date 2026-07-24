@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.blurredlimes.pivotlauncher"
+    namespace = "com.blurredlimes.poslauncher"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.blurredlimes.pivotlauncher"
+        applicationId = "com.blurredlimes.poslauncher"
         // minSdk 24 (Android 7.0): covers the older Android builds common on
         // Sunmi / Elo / generic AIO POS hardware. See SETUP.md for what this costs.
         minSdk = 24

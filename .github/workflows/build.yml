@@ -3,21 +3,21 @@
 # install. A signed release build runs on version tags (v*) when the keystore
 # secrets below are configured.
 #
-# NOTE: paths assume this directory (pivot-launcher/) is the repository root.
+# NOTE: paths assume this directory (poslauncher/) is the repository root.
 # If the launcher lives in a subdirectory of a larger repo, move this file to
-# <repo-root>/.github/workflows/ and add `working-directory: pivot-launcher`
-# (plus the pivot-launcher/ prefix on artifact paths).
+# <repo-root>/.github/workflows/ and add `working-directory: poslauncher`
+# (plus the poslauncher/ prefix on artifact paths).
 #
 # Release signing setup (one time):
 #   1. Create a keystore locally:
 #        keytool -genkeypair -v -keystore release.jks -keyalg RSA -keysize 2048 \
-#          -validity 10000 -alias pivot-launcher
+#          -validity 10000 -alias poslauncher
 #   2. Base64-encode it:  base64 -i release.jks | pbcopy   (macOS)
 #                         base64 -w0 release.jks           (Linux)
 #   3. In the GitHub repo: Settings -> Secrets and variables -> Actions, add:
 #        RELEASE_KEYSTORE_BASE64    (the base64 string)
 #        RELEASE_KEYSTORE_PASSWORD
-#        RELEASE_KEY_ALIAS          (e.g. pivot-launcher)
+#        RELEASE_KEY_ALIAS          (e.g. poslauncher)
 #        RELEASE_KEY_PASSWORD
 #   4. Push a tag like v1.0 to produce the signed APK artifact.
 
@@ -48,7 +48,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: pivot-launcher-debug
+          name: poslauncher-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
@@ -81,6 +81,6 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: pivot-launcher-release
+          name: poslauncher-release
           path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error

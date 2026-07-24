@@ -1,4 +1,4 @@
-package com.blurredlimes.pivotlauncher
+package com.blurredlimes.poslauncher
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image

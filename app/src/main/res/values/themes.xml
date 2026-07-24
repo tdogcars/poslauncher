@@ -3,7 +3,7 @@
     <!-- Pure #000000 from the very first frame: windowBackground paints black
          before Compose attaches, so cold start and activity transitions never
          flash a lighter surface. -->
-    <style name="Theme.PivotLauncher" parent="android:Theme.Material.NoActionBar">
+    <style name="Theme.PosLauncher" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/black</item>
         <item name="android:colorBackground">@color/black</item>
         <item name="android:statusBarColor">@color/black</item>

@@ -1,4 +1,4 @@
-package com.blurredlimes.pivotlauncher
+package com.blurredlimes.poslauncher
 
 import android.Manifest
 import android.content.Context

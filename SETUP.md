@@ -1,7 +1,7 @@
-# Pivot Launcher — Technician Setup
+# POS Launcher — Technician Setup
 
 A minimal home-screen replacement for Android POS terminals. It shows only the
-apps you select (Pivot POS by default) as centered icons on a pure black screen. This is **not** kiosk lockdown —
+apps you select as centered icons on a pure black screen. This is **not** kiosk lockdown —
 staff can still reach Recents and the notification shade; that is by design.
 
 - Default POS package: `com.blurredlimes.pivotpos` (changeable in settings)
@@ -10,7 +10,7 @@ staff can still reach Recents and the notification shade; that is by design.
 ## 1. Get the APK
 
 **From CI (no Android Studio needed):** every push builds a debug APK. GitHub →
-*Actions* tab → latest *Build APK* run → download the `pivot-launcher-debug`
+*Actions* tab → latest *Build APK* run → download the `poslauncher-debug`
 artifact and unzip it to get `app-debug.apk`.
 
 **Locally:** with JDK 17 installed, `./gradlew assembleDebug` produces
@@ -20,7 +20,7 @@ Android Studio or the command-line tools first).
 
 **Signed release:** add the keystore secrets described at the top of
 `.github/workflows/build.yml`, then push a tag like `v1.0`. The
-`pivot-launcher-release` artifact contains the signed `app-release.apk`.
+`poslauncher-release` artifact contains the signed `app-release.apk`.
 Use a release build for fleet deployments — debug builds can't be updated
 in place by a release-signed successor.
 
@@ -43,7 +43,7 @@ Settings → Security on Android 7).
 
 ## 3. Set as the default home app
 
-**Just open the app.** On first launch, if Pivot Launcher is not yet the
+**Just open the app.** On first launch, if POS Launcher is not yet the
 default home app, it prompts automatically: on Android 10+ you get the system
 "set as default" dialog directly; on Android 7.0–9 it opens the Home-app
 settings page. The prompt screen stays (with retry buttons) until the default
@@ -51,11 +51,11 @@ is set, and disappears permanently once it is. Android does not allow an app
 to seize the home role silently, so one confirmation tap is required.
 
 Manual route, if you prefer:
-Settings → **Apps → Default apps → Home app** → choose **Pivot Launcher**.
+Settings → **Apps → Default apps → Home app** → choose **POS Launcher**.
 
 On some Android versions and OEM skins that menu is missing or buried. In that
 case just press the **Home** button: Android shows a chooser listing all
-installed home apps. Pick **Pivot Launcher** and — important — tap
+installed home apps. Pick **POS Launcher** and — important — tap
 **"Always"**, not "Just once". If you tapped "Just once", press Home again and
 choose Always.
 
@@ -96,8 +96,8 @@ no reboot needed.
 ## 5. Revert to the stock launcher
 
 Settings → Apps → Default apps → Home app → select the original launcher.
-Or simply uninstall Pivot Launcher (`adb uninstall
-com.blurredlimes.pivotlauncher` or Settings → Apps); Android falls back to the
+Or simply uninstall POS Launcher (`adb uninstall
+com.blurredlimes.poslauncher` or Settings → Apps); Android falls back to the
 stock launcher automatically.
 
 ## 6. OEM skins and vendor launchers
@@ -135,7 +135,7 @@ Setting the role directly (works on many Android 10+ builds even when the UI
 hides the option):
 
 ```
-adb shell cmd package set-home-activity com.blurredlimes.pivotlauncher/.MainActivity
+adb shell cmd package set-home-activity com.blurredlimes.poslauncher/.MainActivity
 ```
 
 ## Notes
